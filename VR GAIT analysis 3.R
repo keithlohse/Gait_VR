@@ -2,7 +2,7 @@ library("ggplot2"); library("lme4"); library("car"); library("dplyr"); library("
 library("tidyverse"); library("RColorBrewer");library("plyr")
 
 ###set directory
-setwd("C:/Users/u6021023/Box/Gait_VR DATA/Analysis")
+setwd("~/GitHub/Gait_VR")
 
 list.files()
 
@@ -146,6 +146,7 @@ mod5 <- lmer(Confidence2~
 summary(mod5)
 
 
+
 ###Effort
 mod6 <- lmer(Effort~
                #Fixed Effects:
@@ -155,11 +156,9 @@ mod6 <- lmer(Effort~
              REML=FALSE, data=MRFRatings)
 summary(mod6)
 
-####Correlation Analysis
 
 
-
-
+####Correlation Analyses
 ##read in change score data sheet
 Data_Corr <- read.csv("Change Scores.csv", header = TRUE, sep=",",  
                       na.strings=c("NA","NaN"," ",""))
@@ -168,7 +167,6 @@ head(Data_Corr)
 ##Subset correlation data by SS speed
 Data_CorrSS <- subset(Data_Corr, Data_Corr$Speed =='SS', Select = c(Subject:lumb_change))
 
-view(Data_CorrSS)
 summary(Data_CorrSS$Cog_change)
 summary(Data_CorrSS$Som_change)
 summary(Data_CorrSS$Conf_change)
@@ -179,8 +177,6 @@ summary(Data_CorrSS$lumb_change)
 
 Data_CorrFT <- subset(Data_Corr, Data_Corr$Speed =='FT', Select = c(Subject:lumb_change))
 
-view(Data_CorrFT)
-
 summary(Data_CorrFT$Cog_change)
 summary(Data_CorrFT$Som_change)
 summary(Data_CorrFT$Conf_change)
@@ -189,11 +185,11 @@ summary(Data_CorrFT$lumb_change)
 
 
 # Cog anxiety and lumbar at SS
-corr1 <- cor.test(x=Data_CorrSS$Cog_change, y=Data_CorrSS$lumb_change, method = 'spearman')
+corr1 <- cor.test(x=Data_CorrSS$Cog_change, y=Data_CorrSS$lumb_change, method = "spearman")
 (corr1)
 
 # Cog anxiety and lumbar at FT
-corr2 <- cor.test(x=Data_CorrFT$Cog_change, y=Data_CorrFT$lumb_change, method = 'spearman')
+corr2 <- cor.test(x=Data_CorrFT$Cog_change, y=Data_CorrFT$lumb_change, method = "spearman")
 (corr2)
 
 # Somatic anxiety and lumbar at SS
