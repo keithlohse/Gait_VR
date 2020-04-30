@@ -13,7 +13,7 @@ loadfonts(device="win")
 
 
 ###set directory
-setwd("Box/Gait_VR DATA/Analysis")
+setwd("YOUR DIRECTORY HERE")
 list.files()
 
 ####-----READ DATA----####
