@@ -67,7 +67,7 @@ view(DATA_MEAN.H)
 
 DATA_MEAN$Height <-as.factor(DATA_MEAN$Height)
 
-str(DATA)
+head(DATA)
 
 ggplot(data = DATA, mapping = aes (x = Height, y = Ellipse.Sway.Area)) +
   geom_line(aes(group= Subject), col = "grey") + 
