@@ -1,4 +1,4 @@
-###---written by T Raffegeau, last updated 4/29/20
+###---written by T Raffegeau, last updated 4/30/20
 # Loading the essential libraries. 
 library("ggplot2"); library("lme4"); library("car"); library("dplyr"); library("lmerTest"); 
 library("tidyverse"); library("RColorBrewer"); 
@@ -18,7 +18,7 @@ list.files()
 
 ####-----READ DATA----####
 
-DATA<-read.csv("Standing HR YA 3.csv", header = TRUE, sep=",",  
+DATA<-read.csv("Standing HR YA 4.csv", header = TRUE, sep=",",  
                na.strings=c("NA","NaN"," ",""))
 
 head(DATA)
@@ -43,6 +43,135 @@ DATA$Trial <- factor(DATA$Trial, levels = c("Parallel", "Perpendicular"))
 
 str(DATA)
 
+# Mean Centering Height and Trial Variables
+DATA$Trial.c <- as.numeric(DATA$Trial)-1.5
+DATA$Height.c <- as.numeric(DATA$Height)-1.5
+head(DATA)
+
+####-------------Calculate HR CV ----------###
+
+DATA$HR.CV<-(DATA$HR.SD/DATA$HR.AVE)*100
+
+head(DATA)
+str(DATA)
+
+DATA_height <-DATA %>%
+  group_by(Subject, Height) %>%
+  summarize(HR_CV = mean(HR.CV),HR_BPM = mean(HR.AVE), HR_CV.SD = sd(HR.CV),HR_BPM.SD = sd(HR.AVE))
+
+
+DATA_MEAN <-na.omit(DATA) %>%
+  group_by (Height) %>%
+  summarize(HR_CV = mean(HR.CV),HR_BPM = mean(HR.AVE))
+
+DATA_MEAN$Height <-as.factor(DATA_MEAN$Height)
+str(DATA_MEAN)
+####--------HEART RATE DATA VISUALIZATION-------####
+
+#heart rate is collapsed across trials, we are only looking at it between heights
+
+###-----Heart Rate CV ----###
+
+ggplot(data = DATA_height, mapping = aes (x = Height, y = HR_CV)) +
+  geom_line(aes(group= Subject), col = "grey") + 
+  geom_point(col = "grey", fill = "grey", pch=21, size=2, stroke=1.25) +
+  scale_y_continuous(name="Heart Rate CV (%)")+
+  scale_x_discrete(name="")+
+  theme_bw()+ theme(legend.position = "none")+
+  theme(axis.text=element_text(size=14, colour="black"),
+        axis.title=element_text(size=14,face="bold"), 
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        strip.text.x = element_text(size = 14),
+        legend.position="none") + 
+  theme(text=element_text(family="Times New Roman", face="bold")) +
+  geom_point(data = DATA_MEAN, mapping = aes(x = Height, y = HR_CV), 
+             col = "black", fill = "black", alpha=0.9, pch=21, size=3.5, 
+             stroke=1.25) +
+  geom_line(data = DATA_MEAN, mapping = aes(x = Height, y = HR_CV, group=1), col = "black", lty=2, lwd=2)
+
+
+
+
+####----HEART RATE BPM---####
+
+ggplot(data = DATA_height, mapping = aes (x = Height, y = HR_BPM)) +
+  geom_line(aes(group= Subject), col = "grey") + 
+  geom_point(col = "grey", fill = "grey", pch=21, size=2, stroke=1.25) +
+  scale_y_continuous(name="Heart Rate BPM")+
+  scale_x_discrete(name="")+
+  theme_bw()+ theme(legend.position = "none")+
+  theme(axis.text=element_text(size=14, colour="black"),
+        axis.title=element_text(size=14,face="bold"), 
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        strip.text.x = element_text(size = 14),
+        legend.position="none") +
+  theme(text=element_text(family="Times New Roman", face="bold")) +
+  geom_point(data = DATA_MEAN, mapping = aes(x = Height, y = HR_BPM), 
+             col = "black", fill = "black", alpha=0.9, pch=21, size=3.5, 
+             stroke=1.25)+
+  geom_line(data = DATA_MEAN, mapping = aes(x = Height, y = HR_BPM, group=1), col = "black", lty=2, lwd=2)
+
+
+###----HEART RATE CV ANALYSIS----#####
+head(DATA)
+mod1 <- lmer(HR.CV~
+               #Fixed Effects:
+               Height.c*Trial.c+
+               #Random Effects:
+               (1+|Subject)+(1|Height.c:Subject)+(1|Trial.c:Subject),
+             REML = FALSE, data=DATA)
+summary(mod1)
+
+#assumptions tests#
+plot(fitted(mod1),resid(mod1)) #plots to show linearity - want no clear trend in residuals#
+plot(fitted(mod1),resid(mod1)/sd(resid(mod1)))
+plot(fitted(mod1),(abs(resid(mod1)/sd(resid(mod1)))))
+
+summary(lm((abs(resid(mod1)/sd(resid(mod1))))~fitted(mod1)))
+
+
+plot(density(resid(mod1))) #QQ plots to show normality - want fit close as possible to line#
+qqnorm(resid(mod1)/sd(resid(mod1)))
+abline(a=0, b=1)
+res <- length(resid(mod1))
+ks.test(x=resid(mod1)/sd(resid(mod1)),
+        y=rnorm(res, 0, 1))
+
+Anova(mod1, type = "3") #effect sizes (i.e., eta squared)#
+
+
+###----HEART RATE ANALYSIS----#####
+
+mod2 <- lmer(HR.AVE~
+               #Fixed Effects:
+               Height.c*Trial.c+
+               #Random Effects:
+               (1|Subject)+(1|Height.c:Subject)+(1|Trial.c:Subject),
+             REML = FALSE, data=DATA)
+summary(mod2)
+
+#assumptions tests#
+plot(fitted(mod2),resid(mod2)) #plots to show linearity - want no clear trend in residuals#
+plot(fitted(mod2),resid(mod2)/sd(resid(mod2)))
+plot(fitted(mod2),(abs(resid(mod2)/sd(resid(mod2)))))
+
+summary(lm((abs(resid(mod2)/sd(resid(mod2))))~fitted(mod2)))
+
+
+plot(density(resid(mod2))) #QQ plots to show normality - want fit close as possible to line#
+qqnorm(resid(mod2)/sd(resid(mod2)))
+abline(a=0, b=1)
+res <- length(resid(mod2))
+ks.test(x=resid(mod2)/sd(resid(mod2)),
+        y=rnorm(res, 0, 1))
+
+Anova(mod2, type = "3") #effect sizes (i.e., eta squared)#
+
+
+#####-----POSTURE ANALYSES------#####
+##this is where we go back to looking at the trial effect
 
 
 
@@ -67,7 +196,7 @@ view(DATA_MEAN.H)
 
 DATA_MEAN$Height <-as.factor(DATA_MEAN$Height)
 
-head(DATA)
+str(DATA)
 
 ggplot(data = DATA, mapping = aes (x = Height, y = Ellipse.Sway.Area)) +
   geom_line(aes(group= Subject), col = "grey") + 
@@ -94,9 +223,9 @@ ggplot(data = DATA, mapping = aes (x = Height, y = Ellipse.Sway.Area)) +
 
 mod1 <- lmer(Ellipse.Sway.Area~
                #Fixed Effects:
-               Height*Trial+
+               Height.c*Trial.c+
                #Random Effects:
-               (1|Subject)+(1|Height:Subject) + (1|Trial:Subject),
+               (1|Subject)+(1|Height.c:Subject) + (1|Trial.c:Subject),
              REML = FALSE, data=DATA)
 summary(mod1)
 
@@ -200,8 +329,6 @@ view(DATA_MEAN.3H)
 
 
 ###----Ellipse Axis 1 graph-----###
-
-
 DATA_MEAN.3$Height <-as.factor(DATA_MEAN.3$Height)
 
 str(DATA)
@@ -231,15 +358,18 @@ ggplot(data = DATA, mapping = aes (x = Height, y = Ellipse.Acc.Axis.1)) +
 
 mod2 <- lmer(Ellipse.Acc.Axis.1~
                 #Fixed Effects:
-                Height*Trial+
+                Height.c*Trial.c+
                 #Random Effects:
-                (1|Subject)+(1|Height:Subject) + (1|Trial:Subject),
-              REML = FALSE, data=DATA)
+                (1|Subject)+(1|Height.c:Subject) + (1|Trial.c:Subject),
+              REML = FALSE, data=DATA, control=lmerControl(optimizer="Nelder_Mead",
+                                                           optCtrl=list(maxfun=2e5)))
+# This model originally gave a non-convergence warning. Switching to the Nelder-Mead
+# optimizer and increasing the number of iterations solved the problem and did not 
+# change the estimates or p-values.
 summary(mod2)
 
 ##----decomposing Trial x Height interaction ---## 
 ##---look at the effect of height within each trial to match figures---##
-
 mod2a <- lmer(Ellipse.Acc.Axis.1~
                 #Fixed Effects:
                 Height+
@@ -326,9 +456,9 @@ ggplot(data = DATA, mapping = aes (x = Height, y = Ellipse.Acc.Axis.2)) +
 
 mod3 <- lmer(Ellipse.Acc.Axis.2~
                 #Fixed Effects:
-                Height*Trial+
+                Height.c*Trial.c+
                 #Random Effects:
-                (1|Subject)+(1|Height:Subject) + (1|Trial:Subject),
+                (1|Subject)+(1|Height.c:Subject) + (1|Trial.c:Subject),
               REML = FALSE, data=DATA)
 summary(mod3)
 
@@ -423,9 +553,9 @@ ggplot(data = DATA, mapping = aes (x = Height, y = RMS.Sway.Acc)) +
 
 mod4 <- lmer(RMS.Sway.Acc~
                #Fixed Effects:
-              Height * Trial+
+              Height.c*Trial.c+
              #Random Effects:
-             (1|Subject)+(1|Height:Subject)+(1|Trial:Subject),
+             (1|Subject)+(1|Height.c:Subject)+(1|Trial.c:Subject),
              REML = FALSE, data=DATA)
 summary(mod4)
 
@@ -514,9 +644,9 @@ ggplot(data = DATA, mapping = aes (x = Height, y = RMS.Sway.Acc.Coronal)) +
 ###----Coronal RMS Sway Stats---###
 mod5 <- lmer(RMS.Sway.Acc.Coronal~
                #Fixed Effects:
-               Height * Trial+
+               Height.c*Trial.c+
              #Random Effects:
-             (1|Subject)+(1|Height:Subject) + (1|Trial:Subject),
+             (1|Subject)+(1|Height.c:Subject) + (1|Trial.c:Subject),
              REML = FALSE, data=DATA)
 summary(mod5)
 
